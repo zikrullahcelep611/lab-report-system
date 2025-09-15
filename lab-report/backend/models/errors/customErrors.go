@@ -16,10 +16,10 @@ func (e *TokenIsNullError) Error() string {
 	return e.Message
 }
 
-type TokenIsInvalidError struct{
+type InvalidTokenError struct {
 	Message string
 }
 
-func (e *TokenIsInvalidError) Error() string{
+func (e *InvalidTokenError) Error() string {
 	return e.Message
 }

@@ -55,7 +55,7 @@ func (j *JwtService) ParseToken(tokenStr string) (*claims.Claims, error) {
 	}
 
 	if !token.Valid {
-		return nil, &customErrors.TokenIsInvalidError{Message: "Token is invalid"}
+		return nil, &customErrors.InvalidTokenError{Message: "Token is invalid"}
 	}
 
 	return claims, nil
