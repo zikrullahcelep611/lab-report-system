@@ -14,7 +14,7 @@ type LoginRepository interface {
 	Login(ctx context.Context, email string, password string) (auth.Login, error)
 }
 
-type TokenRepository interface {
+type TokenService interface {
 	AddTokenToBlackList(ctx context.Context, tokenStr string, expireTime time.Time) error
 	IsTokenBlackListed(ctx context.Context, tokenStr string) bool
 }
@@ -25,14 +25,14 @@ type JwtService interface {
 
 type AuthService struct {
 	loginRepository LoginRepository
-	tokenRepository TokenRepository
+	tokenService TokenService
 	jwtService      JwtService
 }
 
-func NewAuthService(loginRepository LoginRepository, tokenRepository TokenRepository, jwtService JwtService) *AuthService {
+func NewAuthService(loginRepository LoginRepository, tokenService TokenService, jwtService JwtService) *AuthService {
 	return &AuthService{
 		loginRepository: loginRepository,
-		tokenRepository: tokenRepository,
+		tokenService: tokenService,
 		jwtService:      jwtService,
 	}
 }
@@ -50,7 +50,7 @@ func (a *AuthService) Logout(ctx context.Context, tokenString string) error {
 		return &customErrors.InvalidTokenError{Message: "Invalid token"}
 	}
 
-	err = a.tokenRepository.AddTokenToBlackList(ctx, tokenString, claims.ExpiresAt.Time)
+	err = a.tokenService.AddTokenToBlackList(ctx, tokenString, claims.ExpiresAt.Time)
 	if err != nil {
 		log.Error().Str("operation", "Logout").Err(err).Msg("Failed to add token to blacklist")
 		return err
