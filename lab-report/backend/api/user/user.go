@@ -40,7 +40,7 @@ func (u *UserHandler) GetUser(c *fiber.Ctx) error{
 		})
 	}
 
-	ctx := context.Background()
+	ctx := c.Context()
 
 	usr, err := u.userService.GetUser(ctx, uint(id))
 	if err != nil{
@@ -53,7 +53,7 @@ func (u *UserHandler) GetUser(c *fiber.Ctx) error{
 }
 
 func (u *UserHandler) CreateUser(c *fiber.Ctx) error{
-	ctx := 	context.Background()
+	ctx := 	c.Context()
 
 	var newUser user.User
 	if err := c.BodyParser(&newUser); err != nil{
@@ -72,7 +72,7 @@ func (u *UserHandler) CreateUser(c *fiber.Ctx) error{
 }
 
 func (u *UserHandler) UpdateUser(c *fiber.Ctx) error{
-	ctx := context.Background()
+	ctx := c.Context()
     idStr := c.Params("id")
     id, err := strconv.ParseUint(idStr, 10, 32)
     if err != nil {
@@ -100,7 +100,7 @@ func (u *UserHandler) UpdateUser(c *fiber.Ctx) error{
 }
 
 func (u *UserHandler) DeleteUser(c *fiber.Ctx) error{
-	ctx := context.Background()
+	ctx := c.Context()
 	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {

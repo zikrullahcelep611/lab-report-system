@@ -2,12 +2,10 @@ package report
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 	"strconv"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/report"
-	"github.com/gorilla/mux"
+	"github.com/gofiber/fiber/v2"
 )
 
 type ReportService interface {
@@ -28,140 +26,144 @@ func NewReportController(reportService ReportService) *ReportHandler {
 	return &ReportHandler{reportService: reportService}
 }
 
-func (h *ReportHandler) CreateReport(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	var newReport report.Report
-	if err := json.NewDecoder(r.Body).Decode(&newReport); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	createdReport, err := h.reportService.CreateReport(ctx, newReport)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(createdReport)
-}
-
-func (h *ReportHandler) GetReportsWithPatientName(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	firstName := r.URL.Query().Get("firstName")
-	lastName := r.URL.Query().Get("lastName")
-
-	if firstName == "" || lastName == "" {
-        http.Error(w, "firstName and lastName parameters are required", http.StatusBadRequest)
-        return
+func (h *ReportHandler) CreateReport(c *fiber.Ctx) error { // error return ekle
+    ctx := context.Background()
+    var newReport report.Report
+    if err := c.BodyParser(&newReport); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "Invalid request payload",
+        })
     }
 
-	reports, err := h.reportService.GetReportsWithPatientName(ctx, firstName, lastName)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reports)
-}
-
-func (h *ReportHandler) GetReportsWithPatientNationalID(w http.ResponseWriter, r *http.Request){
-	ctx := r.Context()
-	nationalId := r.URL.Query().Get("nationalID")
-	if nationalId == "" {
-        http.Error(w, "nationalID parameter is required", http.StatusBadRequest)
-        return
+    createdReport, err := h.reportService.CreateReport(ctx, newReport)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{ // return ekle
+            "error": err.Error(),
+        })
     }
 
-	reports, err := h.reportService.GetReportsWithPatientNationalID(ctx, nationalId)
-	if err != nil{
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return 
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reports)
+    return c.Status(fiber.StatusCreated).JSON(createdReport) // return ekle + 201 Created
 }
 
-func (h *ReportHandler) GetAllReportsOrdered(w http.ResponseWriter, r *http.Request){
-	ctx := r.Context()
-	reports, err := h.reportService.GetAllReportsOrdered(ctx)
-	if err != nil{
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return 
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reports)
+func (h *ReportHandler) GetReportsWithPatientName(c *fiber.Ctx) error { // error return ekle
+    ctx := c.Context()
+    firstName := c.Query("firstName")
+    lastName := c.Query("lastName")
+
+    if firstName == "" || lastName == "" {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "firstName and lastName parameters are required",
+        })
+    }
+
+    reports, err := h.reportService.GetReportsWithPatientName(ctx, firstName, lastName)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{ // return ekle
+            "error": err.Error(),
+        })
+    }
+
+    return c.Status(fiber.StatusOK).JSON(reports) // return ekle
 }
 
-func (h *ReportHandler) GetReportByID(w http.ResponseWriter, r *http.Request){
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil{
-		http.Error(w, "Invalid report ID", http.StatusBadRequest)
-		return 
-	} 
+func (h *ReportHandler) GetReportsWithPatientNationalID(c *fiber.Ctx) error { // error return ekle
+    ctx := c.Context()
+    nationalId := c.Query("nationalID")
+    if nationalId == "" {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "nationalID parameter is required",
+        })
+    }
 
-	reportData, err := h.reportService.GetReportByID(ctx, uint(id))
-	if err != nil{
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return 
-	}
+    reports, err := h.reportService.GetReportsWithPatientNationalID(ctx, nationalId)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{ // return ekle (BadRequest değil)
+            "error": err.Error(),
+        })
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reportData)
+    return c.Status(fiber.StatusOK).JSON(reports) // return ekle
 }
 
-func (h *ReportHandler) UpdateReport(w http.ResponseWriter, r *http.Request){
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil{
-		http.Error(w, "Invalid report ID", http.StatusBadRequest)
-		return 
-	}
+func (h *ReportHandler) GetAllReportsOrdered(c *fiber.Ctx) error { // error return ekle
+    ctx := c.Context()
+    reports, err := h.reportService.GetAllReportsOrdered(ctx)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{ // return ekle
+            "error": err.Error(),
+        })
+    }
 
-	var updateReport report.Report
-	if err := json.NewDecoder(r.Body).Decode(&updateReport); err != nil{
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
-	}
-
-	updateReport.ID = uint(id)
-	updatedReport, err := h.reportService.UpdateReport(ctx, updateReport)
-	if err != nil{
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return 
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedReport)
+    return c.Status(fiber.StatusOK).JSON(reports) // return ekle
 }
 
-func (h *ReportHandler) DeleteReport(w http.ResponseWriter, r *http.Request){
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.ParseUint(idStr, 10, 32)
-	if err != nil{
-		http.Error(w, "Invalid report ID", http.StatusBadRequest)
-		return 
-	}
+func (h *ReportHandler) GetReportByID(c *fiber.Ctx) error { // error return ekle
+    ctx := c.Context()
+    idStr := c.Params("id")
+    id, err := strconv.ParseUint(idStr, 10, 32)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "Invalid report ID",
+        })
+    }
 
-	deletedReport, err := h.reportService.DeleteReport(ctx, uint(id))
-	if err != nil{
-		http.Error(w,err.Error(), http.StatusNotFound)
-		return 
-	}
+    reportData, err := h.reportService.GetReportByID(ctx, uint(id))
+    if err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{ // return ekle
+            "error": err.Error(),
+        })
+    }
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"deleted": deletedReport,
-		"message": "Report deleted successfully",
-	})
+    return c.Status(fiber.StatusOK).JSON(reportData) // return ekle
 }
 
+func (h *ReportHandler) UpdateReport(c *fiber.Ctx) error { // error return ekle
+    ctx := c.Context()
+    idStr := c.Params("id")
+    id, err := strconv.ParseUint(idStr, 10, 32)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "Invalid report ID",
+        })
+    }
+
+    var updateReport report.Report
+    if err := c.BodyParser(&updateReport); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "Invalid request payload",
+        })
+    }
+
+    updateReport.ID = uint(id)
+    updatedReport, err := h.reportService.UpdateReport(ctx, updateReport)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{ // return ekle
+            "error": err.Error(),
+        })
+    }
+
+    return c.Status(fiber.StatusOK).JSON(updatedReport) // return ekle
+}
+
+func (h *ReportHandler) DeleteReport(c *fiber.Ctx) error { // error return ekle
+    ctx := c.Context()
+    idStr := c.Params("id")
+    id, err := strconv.ParseUint(idStr, 10, 32)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{ // return ekle
+            "error": "Invalid report ID",
+        })
+    }
+
+    deletedReport, err := h.reportService.DeleteReport(ctx, uint(id))
+    if err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{ // return ekle
+            "error": err.Error(),
+        })
+    }
+
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{ // return ekle + Status ekle
+        "deleted": deletedReport,
+        "message": "Report deleted successfully",
+    })
+}
