@@ -1,11 +1,11 @@
 package jwtservice
 
 import (
-	"net/http"
 	"time"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/claims"
 	customErrors "gitbub.com/zikrullahcelep611/lab-report/backend/models/errors"
+	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -61,13 +61,15 @@ func (j *JwtService) ParseToken(tokenStr string) (*claims.Claims, error) {
 	return claims, nil
 }
 
-func (j *JwtService) ParseTokenFromCookie(r *http.Request) (*claims.Claims, error) {
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		return nil, err
+func (j *JwtService) ParseTokenFromCookie(c *fiber.Ctx) (*claims.Claims, error) {
+	tokenStr := c.Cookies("token")
+	if tokenStr == ""{
+		log.Warn().Str("operation", "ParseTokenFromCookie").Msg("Token cookie not found")
+		return nil, &customErrors.TokenIsNullError{Message: "Token not found in cookies"}
 	}
 
-	return j.ParseToken(cookie.Value)
+	log.Info().Str("operation", "ParseTokenFromCookie").Msg("Token found in cookie")
+	return j.ParseToken(tokenStr)
 }
 
 /*
