@@ -2,14 +2,13 @@ package user
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
-	
+
 	"strconv"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/claims"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/user"
-	"github.com/gorilla/mux"
+	"github.com/gofiber/fiber/v2"
 )
 
 type UserService interface {
@@ -32,91 +31,92 @@ func NewUserController(userService UserService, jwtService JwtService) *UserHand
 	return &UserHandler{userService: userService, jwtService: jwtService}
 }
 
-func (u *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	idStr := vars["id"]
+func (u *UserHandler) GetUser(c *fiber.Ctx) error{
+	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
-
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
+	if err != nil{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
 	}
+
+	ctx := context.Background()
 
 	usr, err := u.userService.GetUser(ctx, uint(id))
-	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
-		return
+	if err != nil{
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "User not found",
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(usr)
+	return c.Status(fiber.StatusOK).JSON(usr)
 }
 
-func (u *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+func (u *UserHandler) CreateUser(c *fiber.Ctx) error{
+	ctx := 	context.Background()
+
 	var newUser user.User
-	err := json.NewDecoder(r.Body).Decode(&newUser)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&newUser); err != nil{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
 	}
 
 	createdUser, err := u.userService.CreateUser(ctx, newUser)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if err != nil{
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(createdUser)
+	return c.Status(fiber.StatusCreated).JSON(createdUser)
 }
 
-func (u *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	vars := mux.Vars(r)
-    idStr := vars["id"]
+func (u *UserHandler) UpdateUser(c *fiber.Ctx) error{
+	ctx := context.Background()
+    idStr := c.Params("id")
     id, err := strconv.ParseUint(idStr, 10, 32)
     if err != nil {
-        http.Error(w, "Invalid user ID", http.StatusBadRequest)
-        return
+        c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
     }
 
 	var updateUser user.User
-	err = json.NewDecoder(r.Body).Decode(&updateUser)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	if err = c.BodyParser(&updateUser); err != nil{
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
 	}
 
 	updateUser.ID = uint(id)
 	updatedUser, err := u.userService.UpdateUser(ctx, updateUser)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedUser)
+	return c.Status(fiber.StatusOK).JSON(updatedUser)
 }
 
-func (u *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	idStr := vars["id"]
+func (u *UserHandler) DeleteUser(c *fiber.Ctx) error{
+	ctx := context.Background()
+	idStr := c.Params("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
-		return
+		c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
 	}
 
 	err = u.userService.DeleteUser(ctx, uint(id))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(map[string]string{"message": "User deleted successfully"})
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "User deleted successfully",
+	})
 }
