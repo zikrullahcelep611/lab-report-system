@@ -11,6 +11,7 @@ type ConfigModel struct {
 	Email    EmailConfig    `yaml:"email" validate:"required"`
 	Log      LogConfig      `yaml:"log" validate:"required"`
 	Redis    RedisConfig    `yaml:"redis" validate:"required"`
+	JWT      JWTConfig      `validate:"required"`
 }
 
 type ServerConfig struct {
