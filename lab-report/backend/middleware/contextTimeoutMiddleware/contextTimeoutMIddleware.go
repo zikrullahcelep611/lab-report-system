@@ -2,42 +2,33 @@ package contexttimeoutmiddleware
 
 import (
 	"context"
-	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gofiber/fiber/v2"
 )
 
-func TimeoutMiddleware(timeoutValue int) mux.MiddlewareFunc {
-	// Convert timeout to a duration
+func TimeoutMiddleware(timeoutValue int) fiber.Handler {
 	timeout := time.Duration(timeoutValue) * time.Second
 
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Create a context with a timeout
-			ctx, cancel := context.WithTimeout(r.Context(), timeout)
-			defer cancel()
+	return func(c *fiber.Ctx) error {
+		ctx, cancel := context.WithTimeout(c.Context(), timeout)
+		defer cancel()
 
-			// Replace the request context with the new timeout context
-			r = r.WithContext(ctx)
+		c.SetUserContext(ctx)
 
-			// Channel to handle when the handler completes
-			done := make(chan struct{})
+		done := make(chan error, 1)
 
-			// Run the handler in a goroutine
-			go func() {
-				next.ServeHTTP(w, r)
-				close(done)
-			}()
+		go func() {
+			done <- c.Next()
+		}()
 
-			// Wait for handler to complete or timeout
-			select {
-			case <-done:
-				// Handler completed successfully
-			case <-ctx.Done():
-				// Context timeout triggered
-				http.Error(w, "Request timed out", http.StatusGatewayTimeout)
-			}
-		})
+		select {
+		case err := <-done:
+			return err
+		case <-ctx.Done():
+			return c.Status(fiber.StatusGatewayTimeout).JSON(fiber.Map{
+				"error": "Request timed out",
+			})
+		}
 	}
 }
