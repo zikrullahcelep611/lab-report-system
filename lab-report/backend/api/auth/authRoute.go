@@ -1,8 +1,12 @@
 package auth
 
-import "github.com/gorilla/mux"
+import (
+	"github.com/gofiber/fiber/v2"
+)
 
-func RegisterAuthRoutes(routes *mux.Router, handler *AuthHandler){
-	routes.HandleFunc("/login", handler.Login).Methods("POST")
-	routes.HandleFunc("/logout", handler.Logout).Methods("POST")
+func RegisterAuthRoutes(app *fiber.App, handler *AuthHandler) {
+	api := app.Group("/api")
+
+	api.Post("/login", handler.Login)
+	api.Post("/logout", handler.Logout)
 }

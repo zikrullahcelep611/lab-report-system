@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
+
 	"time"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/auth"
+	"github.com/gofiber/fiber/v2"
 )
 
 type AuthService interface {
@@ -27,52 +27,64 @@ func NewAuthController(authService AuthService, jwtService JwtService) *AuthHand
 	return &AuthHandler{authService: authService, jwtService: jwtService}
 }
 
-func (a *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+func (a *AuthHandler) Login(c *fiber.Ctx) error{
+	ctx := c.Context()
 	var creds auth.Login
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&creds); err != nil{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request payload",
+		})
 	}
 
 	user, err := a.authService.Login(ctx, creds.Email, creds.Password)
 	if err != nil {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-		return
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid email or password",
+		})
 	}
 
 	expirationTime := time.Now().Add(time.Hour * 24)
 	tokenString, err := a.jwtService.GenerateJwtToken(user.Email, expirationTime)
 	if err != nil {
-		http.Error(w, "Could not create token", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Could not create token",
+		})
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:    "token",
-		Value:   tokenString,
+
+	c.Cookie(&fiber.Cookie{
+		Name: "token",
+		Value: tokenString,
 		Expires: expirationTime,
 	})
-	w.WriteHeader(http.StatusOK)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "message": "Logged out successfully",
+    })
 }
 
-func (a *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Error(w, "Token not found", http.StatusBadRequest)
-		return
+func (a *AuthHandler) Logout(c *fiber.Ctx) error{
+	ctx := c.Context()
+	tokenString := c.Cookies("token")
+	if tokenString == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Token not found",
+		})
 	}
-	tokenString := cookie.Value
+	
 
-	err = a.authService.Logout(ctx, tokenString)
+	err := a.authService.Logout(ctx, tokenString)
 	if err != nil {
-		http.Error(w, "Failed to logout", http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to logout",
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	c.Cookie(&fiber.Cookie{
+        Name:     "token",
+        Value:    "",
+        Expires:  time.Unix(0, 0),
+    })
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Logged out successfully",
 	})
 }
