@@ -1,10 +1,7 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,7 +24,10 @@ import (
 	userrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/userRepository"
 	authmiddleware "gitbub.com/zikrullahcelep611/lab-report/backend/middleware/authMiddleware"
 	contexttimeoutmiddleware "gitbub.com/zikrullahcelep611/lab-report/backend/middleware/contextTimeoutMiddleware"
-	"github.com/gorilla/mux"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -58,62 +58,55 @@ func main() {
 	newReportHandler := report.NewReportController(newReportService)
 	newUserHandler := user.NewUserController(newUserService, newJwtService)
 
-	router := mux.NewRouter()
+	app := fiber.New(fiber.Config{
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	})
 
-	// Create a subrouter
-	securedRouter := router.PathPrefix("/api").Subrouter()
+	app.Use(logger.New())
+	app.Use(recover.New())
+	app.Use(cors.New())
+	app.Use(contexttimeoutmiddleware.TimeoutMiddleware(5))
 
 	newAuthMiddleware := authmiddleware.NewAuthMiddleware(newTokenService, newJwtService)
 
-	router.Use(contexttimeoutmiddleware.TimeoutMiddleware(5))
-	securedRouter.Use(newAuthMiddleware.Authenticate)
+	auth.RegisterAuthRoutes(app, newAuthHandler)
+	user.RegisterUserRoutes(app, newUserHandler)
 
-	auth.RegisterAuthRoutes(router, newAuthHandler)
+	protected := app.Group("/api")
+	protected.Use(newAuthMiddleware.Authenticate)
 
-	report.RegisterReportRoutes(securedRouter, newReportHandler)
-	user.RegisterUserRoutes(router, newUserHandler)
+	report.RegisterReportRoutes(protected, newReportHandler)
 
 	backgroundjobs.StartCleanExpiredJwtTokens(newTokenService)
 
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", configModel.Server.Port),
-		Handler: router,
-	}
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
 	go func() {
-		log.Info().Msg(fmt.Sprintf("Server started on port %d", configModel.Server.Port))
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		addr := fmt.Sprintf(":%d", configModel.Server.Port)
+		log.Info().Msgf("Server started on port %d", configModel.Server.Port)
+		if err := app.Listen(addr); err != nil {
 			log.Fatal().Err(err).Msg("Server failed to start")
 		}
 	}()
 
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Info().Msg("Closing signal received...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		log.Info().Msgf("The server could not be shut down: %v", err)
-	}
-	gracefulShutdown(ctx, server, db)
-	log.Info().Msg("Successful shutdown of the server.")
-
-}
-
-func gracefulShutdown(ctx context.Context, server *http.Server, db *gorm.DB) {
 	log.Info().Msg("Shutting down server...")
 
-	if err := server.Shutdown(ctx); err != nil {
-		log.Error().Err(err).Msg("Failed to gracefully shutdown server")
-	} else {
-		log.Info().Msg("Server stopped gracefully.")
+	if err := app.Shutdown(); err != nil {
+		log.Error().Err(err).Msg("Server shutdown error")
 	}
 
-	// Close database connection
+	gracefulShutdown(db)
+	log.Info().Msg("Server shutdown complete")
+}
+
+func gracefulShutdown(db *gorm.DB) {
+	log.Info().Msg("Shutting down server...")
+
+	// Database connection'ı kapat
 	if db != nil {
 		log.Info().Msg("Closing database connection...")
 		sqlDB, err := db.DB()

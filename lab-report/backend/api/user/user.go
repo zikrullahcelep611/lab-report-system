@@ -2,8 +2,6 @@ package user
 
 import (
 	"context"
-	"net/http"
-
 	"strconv"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/claims"
@@ -19,7 +17,7 @@ type UserService interface {
 }
 
 type JwtService interface {
-	ParseTokenFromCookie(r *http.Request) (*claims.Claims, error)
+	ParseTokenFromCookie(c *fiber.Ctx) (*claims.Claims, error)
 }
 
 type UserHandler struct {
