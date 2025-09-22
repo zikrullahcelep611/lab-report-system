@@ -67,11 +67,11 @@ func (u *Repository) DeleteUser(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (u *Repository) CheckUserExist(ctx context.Context, hospitalID string) (bool, error) {
+func (u *Repository) CheckUserExist(ctx context.Context, hospitalID uint) (bool, error) {
 	var count int64
 	result := u.DB.WithContext(ctx).Model(&user.User{}).Where("hospital_id = ?", hospitalID).Count(&count)
 	if result.Error != nil {
-		log.Error().Str("operation", "CheckUserExist").Err(result.Error).Str("hospital_id", hospitalID).
+		log.Error().Str("operation", "CheckUserExist").Err(result.Error).Uint("hospital_id", hospitalID).
 			Msg("Failed to check user existince")
 		return false, result.Error
 	}

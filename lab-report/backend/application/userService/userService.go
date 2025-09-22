@@ -16,7 +16,7 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, newUser user.User) (user.User, error)
 	UpdateUser(ctx context.Context, updateUser user.User) (user.User, error)
 	DeleteUser(ctx context.Context, id uint) error
-	CheckUserExist(ctx context.Context, hospitalID string) (bool, error)
+	CheckUserExist(ctx context.Context, hospitalID uint) (bool, error)
 }
 
 type UserService struct {
@@ -43,7 +43,7 @@ func (u *UserService) GetUser(ctx context.Context, id uint) (user.User, error){
 }
 
 func (u *UserService) CreateUser(ctx context.Context, newUser user.User) (user.User, error){
-	if newUser.Email == "" || newUser.Password == "" || newUser.HospitalID == "" {
+	if newUser.Email == "" || newUser.Password == "" || newUser.HospitalID == 0{
         return user.User{}, errors.New("email, password and hospital_id are required")
     }
 
@@ -116,7 +116,7 @@ func (s *UserService) CheckUserExist(ctx context.Context, userModel user.User) (
 	log.Info().
 		Str("operation", "CheckUserExist").
 		Str("email", userModel.Email).
-		Str("hospital_id", userModel.HospitalID).
+		Uint("hospital_id", userModel.HospitalID).
 		Uint("id", userModel.ID).
 		Msg("Checking if user exists")
 
