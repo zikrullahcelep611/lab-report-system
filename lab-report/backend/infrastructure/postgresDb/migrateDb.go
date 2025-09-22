@@ -1,6 +1,7 @@
 package postgresdb
 
 import (
+	"gitbub.com/zikrullahcelep611/lab-report/backend/models/hospital"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/patient"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/report"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/token"
@@ -15,6 +16,7 @@ func MigrateDatabase(db *gorm.DB) {
 		&report.Report{},
 		&user.User{},
 		&token.ExpiredTokens{},
+		&hospital.Hospital{},
 	)
 
 	if err != nil {

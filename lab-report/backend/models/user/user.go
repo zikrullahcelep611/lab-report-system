@@ -1,6 +1,9 @@
 package user
 
-import "gorm.io/gorm"
+import (
+	"gitbub.com/zikrullahcelep611/lab-report/backend/models/hospital"
+	"gorm.io/gorm"
+)
 
 //laboratory technician
 
@@ -10,5 +13,7 @@ type User struct {
 	Lastname   string `json:"lastname"`
 	Email      string `json:"email"`
 	Password   string `json:"password"`
-	HospitalID string `json:"hospital_id" gorm:"type:varchar(7);uniqueIndex;not null"`
+
+	HospitalID uint `json:"hospital_id"`
+	Hospital hospital.Hospital `gorm:"foreignKey:hospitalID" json:"hospital"`
 }
