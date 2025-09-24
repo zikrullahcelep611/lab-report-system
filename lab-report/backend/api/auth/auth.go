@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/auth"
+	"gitbub.com/zikrullahcelep611/lab-report/backend/models/role"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,7 +16,7 @@ type AuthService interface {
 }
 
 type JwtService interface {
-	GenerateJwtToken(email string, expirationTime time.Time) (string, error)
+	GenerateJwtToken(email string, role role.Role, expirationTime time.Time) (string, error)
 }
 
 type AuthHandler struct {
@@ -44,7 +45,7 @@ func (a *AuthHandler) Login(c *fiber.Ctx) error{
 	}
 
 	expirationTime := time.Now().Add(time.Hour * 24)
-	tokenString, err := a.jwtService.GenerateJwtToken(user.Email, expirationTime)
+	tokenString, err := a.jwtService.GenerateJwtToken(user.Email, user.Role, expirationTime)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Could not create token",
