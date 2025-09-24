@@ -5,6 +5,7 @@ import (
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/models/claims"
 	customErrors "gitbub.com/zikrullahcelep611/lab-report/backend/models/errors"
+	"gitbub.com/zikrullahcelep611/lab-report/backend/models/role"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
@@ -22,9 +23,10 @@ func (j *JwtService) GetJwtKey() []byte {
 	return j.jwtSecret
 }
 
-func (j *JwtService) GenerateJwtToken(email string, expirationTime time.Time) (string, error) {
+func (j *JwtService) GenerateJwtToken(email string, role role.Role, expirationTime time.Time) (string, error) {
 	claims := &claims.Claims{
 		Email: email,
+		Role:  role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
@@ -63,7 +65,7 @@ func (j *JwtService) ParseToken(tokenStr string) (*claims.Claims, error) {
 
 func (j *JwtService) ParseTokenFromCookie(c *fiber.Ctx) (*claims.Claims, error) {
 	tokenStr := c.Cookies("token")
-	if tokenStr == ""{
+	if tokenStr == "" {
 		log.Warn().Str("operation", "ParseTokenFromCookie").Msg("Token cookie not found")
 		return nil, &customErrors.TokenIsNullError{Message: "Token not found in cookies"}
 	}
@@ -76,7 +78,7 @@ func (j *JwtService) ParseTokenFromCookie(c *fiber.Ctx) (*claims.Claims, error) 
 	Kullanıcı → Web Sitesi → Çerezde Token Saklanır
                        ↓
 	Sonraki İsteklerde → ParseTokenFromCookie (çerezden token al)
-                       ↓  
+                       ↓
                    ParseToken (token'ı çöz ve kontrol et)
                        ↓
                    "Bu kullanıcı kimmiş? Ne yapabilir?"
