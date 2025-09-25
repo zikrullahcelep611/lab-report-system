@@ -79,7 +79,7 @@ func (u *Repository) CheckUserExist(ctx context.Context, hospitalID uint) (bool,
 	exists := count > 0
 	if exists {
 		log.Info().Str("operation", "CheckUserExist").
-			Msgf("User exists with Hospital ID = %s", hospitalID)
+			Msgf("User exists with Hospital ID = %d", hospitalID)
 	} else {
 		log.Info().Str("operation", "CheckUserExist").Msg("User does not exist")
 	}

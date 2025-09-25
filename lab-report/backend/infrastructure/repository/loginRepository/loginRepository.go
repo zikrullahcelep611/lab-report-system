@@ -34,7 +34,7 @@ func (l *Repository) Login(ctx context.Context, email string, password string) (
 	err := bcrypt.CompareHashAndPassword([]byte(usr.Password), []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-			log.Warn().Str("email", email).Msg("Incorrect password attempt")
+			log.Warn().Str("email", email).Str("Hashed_password", usr.Password).Str("password", password).Msg("Incorrect password attempt")
 			return auth.Login{}, err
 		}
 		log.Error().Err(err).Str("email", email).Msg("Error comparing passwords")

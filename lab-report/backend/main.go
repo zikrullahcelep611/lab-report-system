@@ -8,17 +8,23 @@ import (
 	"time"
 
 	"gitbub.com/zikrullahcelep611/lab-report/backend/api/auth"
+	"gitbub.com/zikrullahcelep611/lab-report/backend/api/hospital"
+	"gitbub.com/zikrullahcelep611/lab-report/backend/api/patient"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/api/report"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/api/user"
 	authservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/authService"
+	hospitalservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/hospitalService"
 	jwtservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/jwtService"
+	patientservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/patientService"
 	reportservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/reportService"
 	tokenservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/tokenService"
 	userservice "gitbub.com/zikrullahcelep611/lab-report/backend/application/userService"
 	backgroundjobs "gitbub.com/zikrullahcelep611/lab-report/backend/background_jobs"
 	"gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/config"
 	postgresDb2 "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/postgresDb"
+	hospitalrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/hospitalRepository"
 	loginrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/loginRepository"
+	patientrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/patientRepository"
 	reportrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/reportRepository"
 	tokenrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/tokenRepository"
 	userrepository "gitbub.com/zikrullahcelep611/lab-report/backend/infrastructure/repository/userRepository"
@@ -47,16 +53,22 @@ func main() {
 	newReportRepository := reportrepository.NewRepository(db)
 	newTokenRepository := tokenrepository.NewRepository(db)
 	newUserRepository := userrepository.NewRepository(db)
+	newHospitalRepository := hospitalrepository.NewRepository(db)
+	newPatientRepository := patientrepository.NewRepository(db)
 
 	newJwtService := jwtservice.NewJwtService(configModel.JWT.SecretKey)
 	newTokenService := tokenservice.NewTokenService(newTokenRepository)
 	newAuthService := authservice.NewAuthService(newLoginRepository, newTokenService, newJwtService)
 	newReportService := reportservice.NewReportService(newReportRepository)
 	newUserService := userservice.NewUserService(newUserRepository)
+	newHospitalService := hospitalservice.NewHospitalService(newHospitalRepository)
+	newPatientService := patientservice.NewPatientService(newPatientRepository)
 
 	newAuthHandler := auth.NewAuthController(newAuthService, newJwtService)
 	newReportHandler := report.NewReportController(newReportService)
 	newUserHandler := user.NewUserController(newUserService, newJwtService)
+	newHospitalHandler := hospital.NewHospitalHandler(newHospitalService)
+	newPatientHandler := patient.NewPatientHandler(newPatientService)
 
 	app := fiber.New(fiber.Config{
 		ReadTimeout:  30 * time.Second,
@@ -78,6 +90,8 @@ func main() {
 	protected.Use(newAuthMiddleware.Authenticate)
 
 	report.RegisterReportRoutes(protected, newReportHandler)
+	hospital.RegisterHospitalRoutes(app, newHospitalHandler)
+	patient.RegisterPatientRouter(protected, newPatientHandler)
 
 	backgroundjobs.StartCleanExpiredJwtTokens(newTokenService)
 

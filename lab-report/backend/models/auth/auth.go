@@ -9,7 +9,7 @@ import (
 type Login struct {
 	gorm.Model
 	Email    string `json:"email"`
-	Role 	 role.Role `json:"role" `
-	Password string `json:"passsword"`
+	Role 	 role.Role `json:"role"`
+	Password string `json:"password"`
 	jwt.RegisteredClaims
 }
