@@ -6,7 +6,8 @@ import (
 )
 
 type Claims struct {
-	Email string `json:"email"`
-	Role role.Role `json:"role"`
+	Email    string    `json:"email"`
+	Role     role.Role `json:"role"`
+	Password string    `json:"password"`
 	jwt.RegisteredClaims
 }

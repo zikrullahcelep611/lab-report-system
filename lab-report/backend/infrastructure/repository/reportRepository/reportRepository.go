@@ -33,7 +33,7 @@ func (r *Repository) GetReportsWithPatientName(ctx context.Context, firstName st
 	var rprt []report.Report
 
 	result := r.DB.WithContext(ctx).Preload("Patient").Joins("JOIN patients ON reports.patient_id = patients.id").
-		Where("patients.firstname = ? AND patients.lastname = ?", firstName, lastName).Find(&rprt)
+		Where("patients.name = ? AND patients.lastname = ?", firstName, lastName).Find(&rprt)
 
 	if result.Error != nil {
 		log.Error().Str("operation", "GetReportWithPatientName").Str("firstname", firstName).Str("lastname", lastName).
