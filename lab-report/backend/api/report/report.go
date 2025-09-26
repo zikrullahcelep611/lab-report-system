@@ -47,8 +47,8 @@ func (h *ReportHandler) CreateReport(c *fiber.Ctx) error {
 
 func (h *ReportHandler) GetReportsWithPatientName(c *fiber.Ctx) error {
 	ctx := c.Context()
-	firstName := c.Query("firstName")
-	lastName := c.Query("lastName")
+	firstName := c.Query("firstname")
+	lastName := c.Query("lastname")
 
 	if firstName == "" || lastName == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -95,6 +95,23 @@ func (h *ReportHandler) GetAllReportsOrdered(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(reports)
+}
+
+func (r *ReportHandler) SearchReports(c *fiber.Ctx) error {
+	nationalID := c.Query("nationalID")
+	if nationalID != "" {
+		return r.GetReportsWithPatientNationalID(c)
+	}
+
+	firstName := c.Query("firstname")
+	lastName := c.Query("lastname")
+	if firstName != "" || lastName != "" {
+		return r.GetReportsWithPatientName(c)
+	}
+
+	return c.Status(400).JSON(fiber.Map{
+		"error": "Please provide either nationalID or firstName/lastName parameters",
+	})
 }
 
 func (h *ReportHandler) GetReportByID(c *fiber.Ctx) error {
