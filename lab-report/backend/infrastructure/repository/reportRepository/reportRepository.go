@@ -23,8 +23,19 @@ func (r *Repository) CreateReport(ctx context.Context, newReport report.Report) 
 		return report.Report{}, usr.Error
 	}
 
+	var createdReport report.Report
+	result := r.DB.WithContext(ctx).
+		Preload("User").
+		Preload("Patient").
+		First(&createdReport, newReport.ID)
+	
+	if result.Error != nil {
+		log.Error().Str("operation", "CreateReport").Err(result.Error).Msg("Failed to load created report with relationships")
+		return newReport, nil
+	}
+
 	log.Info().Str("operation", "CreateReport").Msg("Report created successfully")
-	return newReport, nil
+	return createdReport, nil
 }
 
 //bu fonksiyon hasta adi ile arama yapilacak sekilde duzeltilmeli
@@ -32,7 +43,7 @@ func (r *Repository) CreateReport(ctx context.Context, newReport report.Report) 
 func (r *Repository) GetReportsWithPatientName(ctx context.Context, firstName string, lastName string) ([]report.Report, error) {
 	var rprt []report.Report
 
-	result := r.DB.WithContext(ctx).Preload("Patient").Joins("JOIN patients ON reports.patient_id = patients.id").
+	result := r.DB.WithContext(ctx).Preload("User").Preload("Patient").Joins("JOIN patients ON reports.patient_id = patients.id").
 		Where("patients.name = ? AND patients.lastname = ?", firstName, lastName).Find(&rprt)
 
 	if result.Error != nil {
@@ -47,7 +58,7 @@ func (r *Repository) GetReportsWithPatientName(ctx context.Context, firstName st
 
 func (r *Repository) GetReportsWithPatientNationalID(ctx context.Context, nationalID string) ([]report.Report, error) {
 	var rprt []report.Report
-	result := r.DB.WithContext(ctx).Preload("Patient").Joins("JOIN patients ON reports.patient_id = patients.id").
+	result := r.DB.WithContext(ctx).Preload("Patient").Preload("User").Joins("JOIN patients ON reports.patient_id = patients.id").
 		Where("patients.national_id = ?", nationalID).Find(&rprt)
 
 	if result.Error != nil {
